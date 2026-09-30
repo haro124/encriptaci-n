@@ -16,6 +16,69 @@ Todo es Python estándar. **No necesitas instalar nada.**
 | `cliente.py`     | **Peer emisor**: recibe la pública, cifra y envía. |
 | `ataque_mcd.py`  | **Ataque batch GCD**: rompe claves que comparten un primo (fallo real de 2012). |
 | `demo_local.py`  | Todo el ciclo en una sola terminal, ideal para las diapositivas. |
+| `peer.py`        | **Chat P2P en tiempo real**, bidireccional, mostrando la fórmula de cada mensaje. |
+| `formula.py`     | Imprime paso a paso `texto → bytes → m → c = mᵉ mod n` y su inverso. |
+| `espia.py`       | **Atacante en medio**: intercepta el P2P, ve solo números e intenta romper la clave. |
+
+---
+
+## ⭐ Guía para la exposición (todo en una sola PC)
+
+Abre **3 terminales** en esta carpeta (en Windows usa `python` en vez de `python3`).
+
+```
+   Beto (peer)  ───►  ESPÍA :6000  ───►  Ana (peer) :5000
+```
+
+**Terminal 1 — Ana (receptor):**
+```bash
+python3 peer.py escuchar 5000 --nombre Ana
+```
+
+**Terminal 2 — el espía (tu PC haciendo de atacante):**
+```bash
+python3 espia.py 6000 127.0.0.1 5000
+```
+
+**Terminal 3 — Beto (se conecta pasando por el espía, sin saberlo):**
+```bash
+python3 peer.py conectar 127.0.0.1 6000 --nombre Beto
+```
+
+Ahora escribe mensajes en Ana o en Beto. Lo que verán los estudiantes:
+
+| Pantalla | Qué muestra |
+|----------|-------------|
+| **Emisor** | El texto → bytes → número `m` → `c = m^65537 mod n` (la fórmula en vivo). |
+| **Receptor** | `m = c^d mod n` → bytes → el mensaje original. |
+| **Espía** | Las claves públicas, los números `c` y "basura" si intenta leerlos como texto. Intenta factorizar `n` y **se rinde**: 🔒 *"solo veo números, no el mensaje"*. |
+
+### Escena 2: ¿por qué importa el tamaño de la clave?
+
+Repite lo mismo agregando `--bits 32` a **Ana y Beto** (claves de 64 bits):
+
+```bash
+python3 peer.py escuchar 5000 --nombre Ana --bits 32
+python3 espia.py 6000 127.0.0.1 5000
+python3 peer.py conectar 127.0.0.1 6000 --nombre Beto --bits 32
+```
+
+Ahora el espía factoriza `n` en milisegundos, calcula `d` y muestra
+💀 *"DESCIFRADO CON LA CLAVE ROBADA"*. La fórmula es la misma; lo que protege
+es que `n` sea imposible de factorizar.
+
+### Variante: espiar con Wireshark desde tu PC
+
+Sin usar `espia.py`, conecta Beto directo a Ana (`peer.py conectar 127.0.0.1 5000`)
+y abre Wireshark capturando en la interfaz **loopback** (en Windows:
+*"Adapter for loopback traffic capture"*, en Linux: `lo`) con el filtro:
+
+```
+tcp.port == 5000
+```
+
+Clic derecho sobre un paquete → *Follow → TCP Stream*: se ve el JSON con
+`"cifrado": [7883811491...]` — números, nunca el texto.
 
 ---
 

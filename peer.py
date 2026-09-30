@@ -1,0 +1,112 @@
+"""
+CHAT P2P CIFRADO CON RSA EN TIEMPO REAL
+=======================================
+Cada peer genera sus propias claves e intercambia la clave pública con el
+otro. Todo lo que escribes se cifra con la clave pública del otro peer, y
+en pantalla se ve la fórmula paso a paso. Es bidireccional: ambos pueden
+escribir.
+
+    Tú escribes "Hola"  ->  m = 0x01486f6c61  ->  c = m^e mod n  ->  red
+    El otro recibe c    ->  m = c^d mod n     ->  "Hola"
+
+Uso (misma PC, dos terminales):
+    python3 peer.py escuchar 5000 --nombre Ana
+    python3 peer.py conectar 127.0.0.1 5000 --nombre Beto
+
+Con el espía en medio (ver espia.py), Beto se conecta al espía:
+    python3 peer.py conectar 127.0.0.1 6000 --nombre Beto
+
+Opciones:
+    --bits N   bits de CADA primo (defecto 512 -> n de 1024 bits).
+               Usa --bits 32 para una clave débil que el espía SÍ rompe.
+"""
+
+import argparse
+import socket
+import threading
+
+from formula import (mostrar_clave, cifrar_explicado, descifrar_explicado,
+                     verde, rojo, negrita, gris)
+from red import enviar_json, recibir_json
+from rsa_core import generar_claves
+
+
+def escuchar_mensajes(conn, privada, nombre_otro):
+    """Hilo que recibe, descifra y muestra los mensajes del otro peer."""
+    try:
+        while True:
+            paquete = recibir_json(conn)
+            if paquete.get("tipo") != "msg":
+                continue
+            print("\n" + "=" * 64)
+            print(negrita(f"📥 Llegó un mensaje cifrado de {nombre_otro}"))
+            texto = descifrar_explicado(paquete["cifrado"], privada)
+            print(verde(f"  {nombre_otro} dice: {texto}"))
+            print("=" * 64)
+            print("> ", end="", flush=True)
+    except (ConnectionError, OSError):
+        print(rojo(f"\n{nombre_otro} se desconectó."))
+
+
+def main():
+    ap = argparse.ArgumentParser(description="Chat P2P cifrado con RSA")
+    ap.add_argument("modo", choices=["escuchar", "conectar"])
+    ap.add_argument("destino", nargs="*",
+                    help="escuchar: [puerto]  ·  conectar: host [puerto]")
+    ap.add_argument("--nombre", default=None)
+    ap.add_argument("--bits", type=int, default=512,
+                    help="bits de cada primo (defecto 512)")
+    args = ap.parse_args()
+    nombre = args.nombre or ("Receptor" if args.modo == "escuchar" else "Emisor")
+
+    print(negrita(f"Generando claves RSA para {nombre} ({2 * args.bits} bits)..."))
+    publica, privada, _ = generar_claves(bits=args.bits)
+    mostrar_clave(nombre, publica, privada)
+
+    if args.modo == "escuchar":
+        puerto = int(args.destino[0]) if args.destino else 5000
+        srv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        srv.bind(("0.0.0.0", puerto))
+        srv.listen(1)
+        print(f"\nEsperando a un peer en el puerto {puerto}...")
+        conn, addr = srv.accept()
+        srv.close()
+        print(f"Conectado con {addr[0]}:{addr[1]}")
+    else:
+        host = args.destino[0] if args.destino else "127.0.0.1"
+        puerto = int(args.destino[1]) if len(args.destino) > 1 else 5000
+        conn = socket.create_connection((host, puerto))
+        print(f"\nConectado a {host}:{puerto}")
+
+    # Intercambio de claves públicas (la privada nunca viaja)
+    e, n = publica
+    enviar_json(conn, {"tipo": "clave", "nombre": nombre, "e": e, "n": n})
+    clave_otro = recibir_json(conn)
+    nombre_otro = clave_otro["nombre"]
+    publica_otro = (clave_otro["e"], clave_otro["n"])
+    print()
+    mostrar_clave(nombre_otro, publica_otro)
+
+    threading.Thread(target=escuchar_mensajes,
+                     args=(conn, privada, nombre_otro), daemon=True).start()
+
+    print(gris("\nEscribe un mensaje y pulsa Enter (Ctrl+C para salir).\n"))
+    try:
+        while True:
+            texto = input("> ")
+            if not texto:
+                continue
+            cifrado = cifrar_explicado(texto, publica_otro)
+            enviar_json(conn, {"tipo": "msg", "cifrado": cifrado})
+            print(verde(f"📤 Enviado a {nombre_otro} (solo viajan los números c)\n"))
+    except (KeyboardInterrupt, EOFError):
+        print("\nSaliendo.")
+    except (ConnectionError, OSError):
+        print(rojo("La conexión se cerró."))
+    finally:
+        conn.close()
+
+
+if __name__ == "__main__":
+    main()
