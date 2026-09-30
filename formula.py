@@ -7,12 +7,17 @@ vean la matemática en tiempo real:
 
     texto -> bytes -> número m -> c = m^e mod n        (cifrado)
     c -> m = c^d mod n -> bytes -> texto               (descifrado)
+
+También muestra la FIRMA digital, que usa RSA al revés:
+
+    h = SHA-256(texto) -> s = h^d mod n                (firmar, clave privada)
+    s -> h' = s^e mod n -> ¿h' == h?                   (verificar, clave pública)
 """
 
 import os
 import sys
 
-from rsa_core import _tam_bloque
+from rsa_core import _tam_bloque, hash_mensaje
 
 # Windows: activa colores ANSI y evita que un emoji o acento tumbe el
 # programa en consolas que no usan UTF-8 (en Linux no hace nada).
@@ -91,3 +96,39 @@ def descifrar_explicado(cifrados, privada):
         print(f"    m = c^d mod n = {corto(m)}")
         print(gris(f"    bytes = {bloque.hex(' ')}"))
     return salida.decode("utf-8")
+
+
+def firmar_explicado(texto, privada, nombre):
+    """Firma 'texto' mostrando la fórmula. Devuelve el entero de la firma."""
+    d, n = privada
+    h = hash_mensaje(texto, n)
+    s = pow(h, d, n)
+
+    print(amarillo(f"── FIRMANDO  s = h^d mod n   (con la clave PRIVADA de {nombre}) ──"))
+    print(f"  h = SHA-256(texto) mod n = {corto(h)}")
+    print(f"  s = h^d mod n            = {cian(corto(s))}")
+    print(gris("    Nadie más puede calcular esta s: hace falta d."))
+    return s
+
+
+def verificar_explicado(texto, firma, publica, nombre):
+    """Verifica la firma mostrando la fórmula. Devuelve True/False."""
+    e, n = publica
+    if firma is None:
+        print(rojo(f"⚠  El mensaje llegó SIN FIRMA: no puedo probar que sea de {nombre}."))
+        return False
+
+    h_esperado = hash_mensaje(texto, n)
+    h_recuperado = pow(firma, e, n)
+    valida = h_recuperado == h_esperado
+
+    print(amarillo(f"── VERIFICANDO FIRMA  h' = s^e mod n   (clave PÚBLICA de {nombre}) ──"))
+    print(f"  s                        = {corto(firma)}")
+    print(f"  h' = s^e mod n           = {corto(h_recuperado)}")
+    print(f"  SHA-256(texto) mod n     = {corto(h_esperado)}")
+    if valida:
+        print(verde(f"  ✔ FIRMA VÁLIDA: el mensaje es de {nombre} y nadie lo alteró."))
+    else:
+        print(rojo(f"  ✗ FIRMA INVÁLIDA: esto NO lo escribió {nombre}, "
+                   "o el texto fue modificado en el camino."))
+    return valida

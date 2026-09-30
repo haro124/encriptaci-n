@@ -9,6 +9,13 @@ escribir.
     Tú escribes "Hola"  ->  m = 0x01486f6c61  ->  c = m^e mod n  ->  red
     El otro recibe c    ->  m = c^d mod n     ->  "Hola"
 
+Además cada mensaje va FIRMADO con la clave privada de quien lo envía, así
+que el receptor puede probar quién lo escribió (autenticidad) y que nadie
+lo cambió en el camino (integridad):
+
+    Beto firma :  s = h^d_Beto mod n_Beto        (h = SHA-256 del texto)
+    Ana verifica:  h' = s^e_Beto mod n_Beto  ->  ¿h' == SHA-256(texto)?
+
 Uso (misma PC, dos terminales):
     python3 peer.py escuchar 5000 --nombre Ana
     python3 peer.py conectar 127.0.0.1 5000 --nombre Beto
@@ -25,14 +32,21 @@ import argparse
 import threading
 
 from formula import (mostrar_clave, cifrar_explicado, descifrar_explicado,
+                     firmar_explicado, verificar_explicado,
                      verde, rojo, negrita, gris)
 from red import (enviar_json, recibir_json, escuchar_una_conexion,
                  conectar_con_reintentos)
 from rsa_core import generar_claves
 
 
-def escuchar_mensajes(conn, privada, nombre_otro):
-    """Hilo que recibe, descifra y muestra los mensajes del otro peer."""
+def escuchar_mensajes(conn, privada, nombre_otro, publica_otro):
+    """
+    Hilo que recibe, descifra, VERIFICA LA FIRMA y muestra los mensajes.
+
+    Descifrar usa la clave privada propia; verificar usa la clave PÚBLICA
+    del otro peer. Son dos cosas distintas: una da secreto, la otra prueba
+    quién escribió.
+    """
     try:
         while True:
             paquete = recibir_json(conn)
@@ -41,7 +55,12 @@ def escuchar_mensajes(conn, privada, nombre_otro):
             print("\n" + "=" * 64)
             print(negrita(f"📥 Llegó un mensaje cifrado de {nombre_otro}"))
             texto = descifrar_explicado(paquete["cifrado"], privada)
-            print(verde(f"  {nombre_otro} dice: {texto}"))
+            autentico = verificar_explicado(texto, paquete.get("firma"),
+                                            publica_otro, nombre_otro)
+            if autentico:
+                print(verde(f"  {nombre_otro} dice: {texto}"))
+            else:
+                print(rojo(f"  ⚠ Mensaje NO autenticado (¿impostor?): {texto}"))
             print("=" * 64)
             print("> ", end="", flush=True)
     except (ConnectionError, OSError):
@@ -87,7 +106,8 @@ def main():
     mostrar_clave(nombre_otro, publica_otro)
 
     threading.Thread(target=escuchar_mensajes,
-                     args=(conn, privada, nombre_otro), daemon=True).start()
+                     args=(conn, privada, nombre_otro, publica_otro),
+                     daemon=True).start()
 
     print(gris("\nEscribe un mensaje y pulsa Enter (Ctrl+C para salir).\n"))
     try:
@@ -96,8 +116,10 @@ def main():
             if not texto:
                 continue
             cifrado = cifrar_explicado(texto, publica_otro)
-            enviar_json(conn, {"tipo": "msg", "cifrado": cifrado})
-            print(verde(f"📤 Enviado a {nombre_otro} (solo viajan los números c)\n"))
+            firma = firmar_explicado(texto, privada, nombre)
+            enviar_json(conn, {"tipo": "msg", "cifrado": cifrado, "firma": firma})
+            print(verde(f"📤 Enviado a {nombre_otro} "
+                        f"(solo viajan los números c y la firma s)\n"))
     except (KeyboardInterrupt, EOFError):
         print("\nSaliendo.")
     except (ConnectionError, OSError):

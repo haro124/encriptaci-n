@@ -1,2 +1,5 @@
 __pycache__/
 *.pyc
+
+# Datos generados por el plugin /understand (se regeneran solos)
+.ua/

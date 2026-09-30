@@ -16,11 +16,11 @@ Todo es Python estándar. **No necesitas instalar nada.**
 | `cliente.py`     | **Peer emisor**: recibe la pública, cifra y envía. |
 | `ataque_mcd.py`  | **Ataque batch GCD**: rompe claves que comparten un primo (fallo real de 2012). |
 | `demo_local.py`  | Todo el ciclo en una sola terminal, ideal para las diapositivas. |
-| `peer.py`        | **Chat P2P en tiempo real**, bidireccional, mostrando la fórmula de cada mensaje. |
+| `peer.py`        | **Chat P2P en tiempo real**, bidireccional, mostrando la fórmula de cada mensaje y **firmando** cada envío. |
 | `formula.py`     | Imprime paso a paso `texto → bytes → m → c = mᵉ mod n` y su inverso. |
 | `lanzar_demo.py` | **Menú** que abre las ventanas solo (Linux y Windows). |
 | `iniciar_demo.sh` / `.bat` | Doble clic / `./` para arrancar el menú en CachyOS o Windows. |
-| `espia.py`       | **Atacante en medio**: intercepta el P2P, ve solo números e intenta romper la clave. |
+| `espia.py`       | **Atacante en medio**: intercepta el P2P, ve solo números, intenta romper la clave y **calcula cuánto tardaría con una clave de 2048 bits**. |
 
 ---
 
@@ -195,13 +195,60 @@ python3 ataque_mcd.py 512     # primos más grandes
 
 ---
 
+## 5) Firma digital (¿de verdad lo escribió Beto?)
+
+El cifrado da **confidencialidad**, pero no dice quién escribió: la clave
+pública de Ana la tiene cualquiera, así que cualquiera puede escribirle
+diciendo "soy Beto". La firma añade **autenticidad** e **integridad** usando
+RSA al revés:
+
+```
+Beto firma    :  h = SHA-256(texto)      s = h^d_Beto mod n_Beto   (clave PRIVADA)
+Ana verifica  :  h' = s^e_Beto mod n_Beto        ¿h' == SHA-256(texto)?
+```
+
+`peer.py` lo hace en cada mensaje sin que tengas que pedir nada: Ana ve
+`✔ FIRMA VÁLIDA: el mensaje es de Beto y nadie lo alteró`, y si el texto o la
+firma no cuadran sale `✗ FIRMA INVÁLIDA`. Prueba rápida sin red:
+
+```bash
+python3 rsa_core.py      # firma, verifica, y rechaza el texto alterado
+```
+
+En la opción 2 del menú (clave débil) el espía rompe la clave de Beto, así que
+también puede **firmar en su nombre**: la firma solo vale si la clave es fuerte.
+
+---
+
+## 6) ¿Cuánto tardaría en romper una clave real?
+
+El espía lo calcula al arrancar, midiendo la velocidad de **tu** máquina:
+
+```bash
+python3 espia.py --estimar 2048     # por defecto; 0 = no estimar
+python3 espia.py --estimar 4096
+```
+
+- **Pollard rho** (el método que usa el espía): ~`2^(bits/4)` pasos → para 2048
+  bits, del orden de `10^141` años, o `10^131` veces la edad del universo.
+- **GNFS** (el mejor algoritmo conocido), calibrado con el récord real
+  **RSA-250** (829 bits, ~2700 años-CPU en 2020): del orden de `10^14`
+  años-CPU para 2048 bits; incluso con un millón de núcleos, `10^8` años.
+
+Con 1024 bits el mismo cálculo da ~`10^5` años-CPU: al alcance de una granja
+grande, y por eso hoy el mínimo recomendado es 2048.
+
+---
+
 ## Cómo funciona (resumen)
 
 1. El receptor genera `p`, `q` primos → `n = p·q` y `φ(n) = (p-1)(q-1)`.
 2. Elige `e = 65537` con **`mcd(e, φ(n)) = 1`** (coprimalidad → hay inverso).
 3. Calcula `d = e⁻¹ mod φ(n)` con **Euclides extendido**.
 4. Cifrar: `c = mᵉ mod n`. Descifrar: `m = cᵈ mod n`.
-5. **Ataque**: si `n1 = p·q1` y `n2 = p·q2`, entonces `mcd(n1, n2) = p`
+5. **Firmar**: `s = hᵈ mod n` con la privada; verificar: `h = sᵉ mod n` con la
+   pública (`h` = SHA-256 del texto, reducido mod `n`).
+6. **Ataque**: si `n1 = p·q1` y `n2 = p·q2`, entonces `mcd(n1, n2) = p`
    y ambas claves caen.
 
 ⚠️ Esto es **RSA "de libro"** con fines educativos: no usa relleno (padding
@@ -217,4 +264,4 @@ Abre esta carpeta en Claude Code (`claude` en la terminal) y pídele mejoras, po
 - *"Agrega cifrado híbrido: RSA para intercambiar una clave AES y AES para el mensaje."*
 - *"Hazme una interfaz web con Flask para la demo."*
 - *"Implementa el batch GCD eficiente (árbol de productos) para miles de claves."*
-- *"Agrega firma digital: firmar con la privada y verificar con la pública."*
+- *"Añade padding OAEP para que el cifrado no sea determinista."*

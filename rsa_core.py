@@ -7,10 +7,12 @@ Todo implementado desde cero, sin librerías externas:
   - Miller-Rabin              -> test de primalidad
   - Generación de claves RSA
   - Cifrado / descifrado por bloques (texto de cualquier longitud)
+  - Firma digital             -> autenticidad: ¿quién escribió esto?
 
 Referencia: los pasos siguen el documento "MCD y Coprimalidad en Criptografía".
 """
 
+import hashlib
 import secrets
 from math import gcd
 
@@ -152,6 +154,41 @@ def descifrar_mensaje(cifrados, clave_privada):
 
 
 # ---------------------------------------------------------------------------
+# 5. Firma digital (¿quién escribió el mensaje?)
+# ---------------------------------------------------------------------------
+# El cifrado da CONFIDENCIALIDAD (nadie más lo lee) pero no AUTENTICIDAD:
+# la clave pública de Ana la tiene cualquiera, así que cualquiera puede
+# escribirle diciendo "soy Beto". La firma resuelve eso usando RSA al revés:
+#
+#     firmar     : s = h^d mod n   -> con la clave PRIVADA del que firma
+#     verificar  : h = s^e mod n   -> con la clave PÚBLICA del que firmó
+#
+# Solo el dueño de d puede producir una s válida, y como h es el resumen
+# del texto, cambiar una sola letra del mensaje invalida la firma.
+# ---------------------------------------------------------------------------
+def hash_mensaje(texto, n):
+    """
+    Resumen SHA-256 del texto, como número y reducido mod n.
+    El 'mod n' hace falta porque la firma vive en Z_n: si el resumen fuera
+    mayor que n, la exponenciación modular ya no podría recuperarlo.
+    """
+    resumen = hashlib.sha256(texto.encode("utf-8")).digest()
+    return int.from_bytes(resumen, "big") % n
+
+
+def firmar(texto, clave_privada):
+    """Firma el texto: s = h^d mod n (solo quien tiene d puede calcularla)."""
+    d, n = clave_privada
+    return pow(hash_mensaje(texto, n), d, n)
+
+
+def verificar(texto, firma, clave_publica):
+    """True si 'firma' fue hecha por el dueño de 'clave_publica' sobre 'texto'."""
+    e, n = clave_publica
+    return pow(firma, e, n) == hash_mensaje(texto, n)
+
+
+# ---------------------------------------------------------------------------
 # Prueba rápida al ejecutar este archivo directamente
 # ---------------------------------------------------------------------------
 if __name__ == "__main__":
@@ -163,3 +200,11 @@ if __name__ == "__main__":
     print(f"\nOriginal   : {mensaje!r}")
     print(f"Descifrado : {m!r}")
     print("OK ✔" if m == mensaje else "FALLO ✗")
+
+    print("\nFirma digital:")
+    s = firmar(mensaje, priv)
+    print(f"  s = {str(s)[:60]}...")
+    print("  verifica con la pública      :",
+          "OK ✔" if verificar(mensaje, s, pub) else "FALLO ✗")
+    print("  con el texto alterado        :",
+          "rechazada ✔" if not verificar(mensaje + "!", s, pub) else "ACEPTADA ✗")
