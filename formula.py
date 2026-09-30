@@ -12,6 +12,9 @@ También muestra la FIRMA digital, que usa RSA al revés:
 
     h = SHA-256(texto) -> s = h^d mod n                (firmar, clave privada)
     s -> h' = s^e mod n -> ¿h' == h?                   (verificar, clave pública)
+
+Y el interior del algoritmo que lo hace posible: la tabla de Euclides y
+Euclides extendido con los coeficientes de Bézout, división por división.
 """
 
 import os
@@ -132,3 +135,75 @@ def verificar_explicado(texto, firma, publica, nombre):
         print(rojo(f"  ✗ FIRMA INVÁLIDA: esto NO lo escribió {nombre}, "
                    "o el texto fue modificado en el camino."))
     return valida
+
+
+# ---------------------------------------------------------------------------
+# El interior del algoritmo: Euclides, paso a paso
+# ---------------------------------------------------------------------------
+def mcd_explicado(a, b, sangria="  "):
+    """
+    Imprime la tabla del algoritmo de Euclides y devuelve mcd(a, b).
+
+    Cada fila es una división entera: el resto de una pasa a ser el divisor
+    de la siguiente. Cuando el resto llega a 0, el divisor es el MCD.
+    """
+    print(amarillo(f"{sangria}── MCD por Euclides: mcd({a}, {b}) ──"))
+    x, y = a, b
+    if x < y:                      # evita una primera división que solo intercambia
+        print(gris(f"{sangria}  ({a} < {b}: dividimos el mayor entre el menor)"))
+        x, y = y, x
+    while y:
+        cociente, resto = divmod(x, y)
+        print(f"{sangria}  {x} = {cociente} × {y} + {resto}")
+        x, y = y, resto
+    print(f"{sangria}  resto 0  ->  mcd = {negrita(x)}")
+    return x
+
+
+def _fila(celdas, anchos):
+    return "  ".join(str(c).rjust(w) for c, w in zip(celdas, anchos))
+
+
+def inverso_explicado(a, n, sangria="  "):
+    """
+    Calcula a⁻¹ mod n mostrando Euclides EXTENDIDO como tabla.
+
+    Cada fila cumple la identidad de Bézout  r = s·a + t·n, así que cuando
+    el resto r llega a 1 tenemos  1 = s·a + t·n, y al tomar módulo n queda
+    s·a ≡ 1 (mod n): ese s es el inverso. Devuelve None si no existe.
+    """
+    print(amarillo(f"{sangria}── INVERSO MODULAR: buscamos d con {a}·d ≡ 1 (mod {n}) ──"))
+    print(gris(f"{sangria}  Euclides extendido. Cada fila cumple  r = s·{a} + t·{n}"))
+    if a < n:
+        print(gris(f"{sangria}  (la fila con cociente 0 solo pone el mayor arriba)"))
+
+    filas = []
+    viejo = (a, 1, 0)      # (r, s, t)
+    actual = (n, 0, 1)
+    filas.append(("", *viejo))
+    filas.append(("", *actual))
+    while actual[0] != 0:
+        cociente = viejo[0] // actual[0]
+        nuevo = tuple(v - cociente * c for v, c in zip(viejo, actual))
+        filas.append((cociente, *nuevo))
+        viejo, actual = actual, nuevo
+
+    cabecera = ("cociente", "r", "s", "t")
+    anchos = [max(len(str(f[i])) for f in filas + [cabecera]) for i in range(4)]
+    print(gris(f"{sangria}  {_fila(cabecera, anchos)}"))
+    print(gris(f"{sangria}  {'-' * (sum(anchos) + 6)}"))
+    for f in filas:
+        print(f"{sangria}  {_fila(f, anchos)}")
+
+    g, s, _t = viejo
+    if g != 1:
+        print(rojo(f"{sangria}  El último resto no nulo es {g} ≠ 1: "
+                   f"{a} y {n} NO son coprimos, no hay inverso."))
+        return None
+
+    print(f"{sangria}  Bézout: 1 = {s}·{a} + {_t}·{n}")
+    d = s % n
+    if s != d:
+        print(gris(f"{sangria}  s = {s} es negativo, se ajusta: {s} mod {n} = {d}"))
+    print(verde(f"{sangria}  d = {negrita(d)}"))
+    return d

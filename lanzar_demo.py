@@ -3,14 +3,14 @@ LANZADOR DE LA DEMO (Linux/CachyOS y Windows)
 =============================================
 Abre automáticamente una ventana por cada participante:
 
-    Beto  ───►  ESPÍA :6000  ───►  Ana :5000
+    Efrén  ───►  ESPÍA :6000  ───►  Harold :5000
 
 Todo corre en esta misma PC (127.0.0.1). No hace falta instalar nada
 aparte de Python 3.
 
 Uso:
     python3 lanzar_demo.py            # menú interactivo
-    python3 lanzar_demo.py 1          # opción directa (1-5)
+    python3 lanzar_demo.py 1          # opción directa (1-6)
 
 Normalmente se ejecuta con iniciar_demo.sh (Linux) o iniciar_demo.bat (Windows).
 """
@@ -27,14 +27,15 @@ PY = sys.executable
 ES_WINDOWS = os.name == "nt"
 
 MENU = """
-==============================================================
+========================================================================
    RSA sobre P2P · DEMO PARA LA EXPOSICIÓN
-==============================================================
-  1) Chat Ana <-> Beto con ESPÍA en medio  (clave fuerte 1024 bits)
-  2) Chat Ana <-> Beto con ESPÍA en medio  (clave DÉBIL 64 bits)
-  3) Chat Ana <-> Beto directo, sin espía  (para espiar con Wireshark)
-  4) Demo paso a paso en una sola ventana  (demo_local.py)
-  5) Ataque de MCD a claves mal generadas  (ataque_mcd.py)
+========================================================================
+  1) Chat Harold <-> Efrén con ESPÍA en medio  (clave fuerte 1024 bits)
+  2) Chat Harold <-> Efrén con ESPÍA en medio  (clave DÉBIL 64 bits)
+  3) Chat Harold <-> Efrén directo, sin espía  (para espiar con Wireshark)
+  4) Demo paso a paso en una sola ventana      (demo_local.py)
+  5) Ataque de MCD a claves mal generadas      (ataque_mcd.py)
+  6) Construye TU clave: eliges p, q y e       (mi_clave.py)
   0) Salir
 """
 
@@ -94,16 +95,16 @@ def abrir_ventana(titulo, script, *args):
 def chat(bits, con_espia):
     local = ["--host", "127.0.0.1"]           # solo esta PC: sin aviso del firewall
     bits_arg = ["--bits", str(bits)]
-    ventanas = [("Ana (receptor)", "peer.py",
-                 ["escuchar", "5000", "--nombre", "Ana", *bits_arg, *local])]
+    ventanas = [("Harold (receptor)", "peer.py",
+                 ["escuchar", "5000", "--nombre", "Harold", *bits_arg, *local])]
     if con_espia:
         ventanas.append(("ESPIA (atacante)", "espia.py",
                          ["6000", "127.0.0.1", "5000", *local]))
-        ventanas.append(("Beto (emisor)", "peer.py",
-                         ["conectar", "127.0.0.1", "6000", "--nombre", "Beto", *bits_arg]))
+        ventanas.append(("Efrén (emisor)", "peer.py",
+                         ["conectar", "127.0.0.1", "6000", "--nombre", "Efrén", *bits_arg]))
     else:
-        ventanas.append(("Beto (emisor)", "peer.py",
-                         ["conectar", "127.0.0.1", "5000", "--nombre", "Beto", *bits_arg]))
+        ventanas.append(("Efrén (emisor)", "peer.py",
+                         ["conectar", "127.0.0.1", "5000", "--nombre", "Efrén", *bits_arg]))
 
     for titulo, script, args in ventanas:
         if not abrir_ventana(titulo, script, *args):
@@ -111,9 +112,9 @@ def chat(bits, con_espia):
                 print("   ", shlex.join([PY, s, *a]) if not ES_WINDOWS
                       else subprocess.list2cmdline([PY, s, *a]))
             return
-        time.sleep(1.0)                      # orden: Ana, espía, Beto
+        time.sleep(1.0)                      # orden: Harold, espía, Efrén
 
-    print(f"\nAbiertas {len(ventanas)} ventanas. Escribe mensajes en Ana o en Beto.")
+    print(f"\nAbiertas {len(ventanas)} ventanas. Escribe mensajes en Harold o en Efrén.")
     if not con_espia:
         print("Wireshark: interfaz loopback ('lo' en Linux, 'Adapter for loopback "
               "traffic capture' en Windows), filtro:  tcp.port == 5000")
@@ -139,6 +140,8 @@ def main():
             en_esta_ventana("demo_local.py")
         elif opcion == "5":
             en_esta_ventana("ataque_mcd.py")
+        elif opcion == "6":
+            en_esta_ventana("mi_clave.py")
         elif opcion in ("0", "q", ""):
             return
         else:

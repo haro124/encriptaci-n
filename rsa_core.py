@@ -157,8 +157,8 @@ def descifrar_mensaje(cifrados, clave_privada):
 # 5. Firma digital (¿quién escribió el mensaje?)
 # ---------------------------------------------------------------------------
 # El cifrado da CONFIDENCIALIDAD (nadie más lo lee) pero no AUTENTICIDAD:
-# la clave pública de Ana la tiene cualquiera, así que cualquiera puede
-# escribirle diciendo "soy Beto". La firma resuelve eso usando RSA al revés:
+# la clave pública de Harold la tiene cualquiera, así que cualquiera puede
+# escribirle diciendo "soy Efrén". La firma resuelve eso usando RSA al revés:
 #
 #     firmar     : s = h^d mod n   -> con la clave PRIVADA del que firma
 #     verificar  : h = s^e mod n   -> con la clave PÚBLICA del que firmó

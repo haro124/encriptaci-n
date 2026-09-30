@@ -10,14 +10,15 @@ Todo es Python estándar. **No necesitas instalar nada.**
 
 | Archivo          | Qué hace |
 |------------------|----------|
-| `rsa_core.py`    | El núcleo: Euclides extendido, inverso modular, Miller-Rabin, generación de claves, cifrado/descifrado. |
+| `rsa_core.py`    | El núcleo: Euclides extendido, inverso modular, Miller-Rabin, generación de claves, cifrado/descifrado y firma. |
 | `red.py`         | Envío/recepción de mensajes por socket TCP (JSON con framing por longitud). |
 | `servidor.py`    | **Peer receptor**: genera claves, comparte la pública, descifra con la privada. |
 | `cliente.py`     | **Peer emisor**: recibe la pública, cifra y envía. |
 | `ataque_mcd.py`  | **Ataque batch GCD**: rompe claves que comparten un primo (fallo real de 2012). |
 | `demo_local.py`  | Todo el ciclo en una sola terminal, ideal para las diapositivas. |
 | `peer.py`        | **Chat P2P en tiempo real**, bidireccional, mostrando la fórmula de cada mensaje y **firmando** cada envío. |
-| `formula.py`     | Imprime paso a paso `texto → bytes → m → c = mᵉ mod n` y su inverso. |
+| `formula.py`     | Imprime paso a paso `texto → bytes → m → c = mᵉ mod n`, su inverso, la firma y las tablas de Euclides. |
+| `mi_clave.py`    | **Construye tu clave a mano**: eliges `p`, `q` y `e`, y enseña toda la matemática división por división. |
 | `lanzar_demo.py` | **Menú** que abre las ventanas solo (Linux y Windows). |
 | `iniciar_demo.sh` / `.bat` | Doble clic / `./` para arrancar el menú en CachyOS o Windows. |
 | `espia.py`       | **Atacante en medio**: intercepta el P2P, ve solo números, intenta romper la clave y **calcula cuánto tardaría con una clave de 2048 bits**. |
@@ -26,15 +27,16 @@ Todo es Python estándar. **No necesitas instalar nada.**
 
 ## 🚀 Inicio rápido (un clic)
 
-El lanzador abre **solo** las 3 ventanas (Ana, Espía, Beto) en tu PC y
+El lanzador abre **solo** las 3 ventanas (Harold, Espía, Efrén) en tu PC y
 muestra un menú:
 
 ```
-  1) Chat Ana <-> Beto con ESPÍA en medio  (clave fuerte 1024 bits)
-  2) Chat Ana <-> Beto con ESPÍA en medio  (clave DÉBIL 64 bits)
-  3) Chat Ana <-> Beto directo, sin espía  (para espiar con Wireshark)
+  1) Chat Harold <-> Efrén con ESPÍA en medio  (clave fuerte 1024 bits)
+  2) Chat Harold <-> Efrén con ESPÍA en medio  (clave DÉBIL 64 bits)
+  3) Chat Harold <-> Efrén directo, sin espía  (para espiar con Wireshark)
   4) Demo paso a paso en una sola ventana
   5) Ataque de MCD a claves mal generadas
+  6) Construye TU clave: eliges p, q y e
 ```
 
 ### 🐧 CachyOS / Arch Linux
@@ -75,12 +77,12 @@ Si prefieres abrir las terminales tú mismo: abre **3 terminales** en esta
 carpeta (en Windows usa `python` en vez de `python3`).
 
 ```
-   Beto (peer)  ───►  ESPÍA :6000  ───►  Ana (peer) :5000
+   Efrén (peer)  ───►  ESPÍA :6000  ───►  Harold (peer) :5000
 ```
 
-**Terminal 1 — Ana (receptor):**
+**Terminal 1 — Harold (receptor):**
 ```bash
-python3 peer.py escuchar 5000 --nombre Ana
+python3 peer.py escuchar 5000 --nombre Harold
 ```
 
 **Terminal 2 — el espía (tu PC haciendo de atacante):**
@@ -88,12 +90,12 @@ python3 peer.py escuchar 5000 --nombre Ana
 python3 espia.py 6000 127.0.0.1 5000
 ```
 
-**Terminal 3 — Beto (se conecta pasando por el espía, sin saberlo):**
+**Terminal 3 — Efrén (se conecta pasando por el espía, sin saberlo):**
 ```bash
-python3 peer.py conectar 127.0.0.1 6000 --nombre Beto
+python3 peer.py conectar 127.0.0.1 6000 --nombre Efrén
 ```
 
-Ahora escribe mensajes en Ana o en Beto. Lo que verán los estudiantes:
+Ahora escribe mensajes en Harold o en Efrén. Lo que verán los estudiantes:
 
 | Pantalla | Qué muestra |
 |----------|-------------|
@@ -103,12 +105,12 @@ Ahora escribe mensajes en Ana o en Beto. Lo que verán los estudiantes:
 
 ### Escena 2: ¿por qué importa el tamaño de la clave?
 
-Repite lo mismo agregando `--bits 32` a **Ana y Beto** (claves de 64 bits):
+Repite lo mismo agregando `--bits 32` a **Harold y Efrén** (claves de 64 bits):
 
 ```bash
-python3 peer.py escuchar 5000 --nombre Ana --bits 32
+python3 peer.py escuchar 5000 --nombre Harold --bits 32
 python3 espia.py 6000 127.0.0.1 5000
-python3 peer.py conectar 127.0.0.1 6000 --nombre Beto --bits 32
+python3 peer.py conectar 127.0.0.1 6000 --nombre Efrén --bits 32
 ```
 
 Ahora el espía factoriza `n` en milisegundos, calcula `d` y muestra
@@ -117,7 +119,7 @@ es que `n` sea imposible de factorizar.
 
 ### Variante: espiar con Wireshark desde tu PC
 
-Sin usar `espia.py`, conecta Beto directo a Ana (`peer.py conectar 127.0.0.1 5000`)
+Sin usar `espia.py`, conecta Efrén directo a Harold (`peer.py conectar 127.0.0.1 5000`)
 y abre Wireshark capturando en la interfaz **loopback** (en Windows:
 *"Adapter for loopback traffic capture"*, en Linux: `lo`) con el filtro:
 
@@ -195,27 +197,27 @@ python3 ataque_mcd.py 512     # primos más grandes
 
 ---
 
-## 5) Firma digital (¿de verdad lo escribió Beto?)
+## 5) Firma digital (¿de verdad lo escribió Efrén?)
 
 El cifrado da **confidencialidad**, pero no dice quién escribió: la clave
-pública de Ana la tiene cualquiera, así que cualquiera puede escribirle
-diciendo "soy Beto". La firma añade **autenticidad** e **integridad** usando
+pública de Harold la tiene cualquiera, así que cualquiera puede escribirle
+diciendo "soy Efrén". La firma añade **autenticidad** e **integridad** usando
 RSA al revés:
 
 ```
-Beto firma    :  h = SHA-256(texto)      s = h^d_Beto mod n_Beto   (clave PRIVADA)
-Ana verifica  :  h' = s^e_Beto mod n_Beto        ¿h' == SHA-256(texto)?
+Efrén firma    :  h = SHA-256(texto)      s = h^d_Efrén mod n_Efrén   (clave PRIVADA)
+Harold verifica  :  h' = s^e_Efrén mod n_Efrén        ¿h' == SHA-256(texto)?
 ```
 
-`peer.py` lo hace en cada mensaje sin que tengas que pedir nada: Ana ve
-`✔ FIRMA VÁLIDA: el mensaje es de Beto y nadie lo alteró`, y si el texto o la
+`peer.py` lo hace en cada mensaje sin que tengas que pedir nada: Harold ve
+`✔ FIRMA VÁLIDA: el mensaje es de Efrén y nadie lo alteró`, y si el texto o la
 firma no cuadran sale `✗ FIRMA INVÁLIDA`. Prueba rápida sin red:
 
 ```bash
 python3 rsa_core.py      # firma, verifica, y rechaza el texto alterado
 ```
 
-En la opción 2 del menú (clave débil) el espía rompe la clave de Beto, así que
+En la opción 2 del menú (clave débil) el espía rompe la clave de Efrén, así que
 también puede **firmar en su nombre**: la firma solo vale si la clave es fuerte.
 
 ---
@@ -237,6 +239,62 @@ python3 espia.py --estimar 4096
 
 Con 1024 bits el mismo cálculo da ~`10^5` años-CPU: al alcance de una granja
 grande, y por eso hoy el mínimo recomendado es 2048.
+
+---
+
+## 7) Construye tu propia clave (eliges tú los números)
+
+La opción **6** del menú, o directamente:
+
+```bash
+python3 mi_clave.py            # te pregunta p, q y e
+python3 mi_clave.py 61 53 17   # con los números ya puestos
+```
+
+Pulsando Enter aceptas el ejemplo clásico de los libros —`p = 61`, `q = 53`,
+`e = 17`— y salen `n = 3233`, `φ(n) = 3120` y `d = 2753`, los mismos números
+que puedes escribir en el pizarrón.
+
+**Lo que enseña, paso por paso:**
+
+1. **Valida tus primos** con Miller-Rabin. Si metes 9 te dice que no es primo y
+   por qué importa; si repites `p = q` te explica que entonces `n = p²` y sacar
+   `p` es solo una raíz cuadrada.
+2. **`n = p·q` y `φ(n) = (p-1)(q-1)`** con la multiplicación a la vista.
+3. **`mcd(e, φ(n))` con la tabla completa de Euclides**, división por división.
+   Si eliges un `e` que no sirve, lo ves fallar:
+
+   ```
+   ── MCD por Euclides: mcd(5, 3120) ──
+     3120 = 624 × 5 + 0
+     resto 0  ->  mcd = 5
+   mcd(5, 3120) ≠ 1: NO son coprimos, así que e no
+   tiene inverso módulo φ(n) y no existiría d. Elige otro.
+   ```
+
+4. **`d = e⁻¹ mod φ(n)` con Euclides extendido en tabla**, con los coeficientes
+   de Bézout y el ajuste del negativo:
+
+   ```
+   cociente     r     s    t
+   -------------------------
+              3120     0    1
+        183     9  -183    1
+          1     8   184   -1
+          1     1  -367    2
+   Bézout: 1 = -367·17 + 2·3120
+   s = -367 es negativo, se ajusta: -367 mod 3120 = 2753
+   d = 2753
+   ```
+
+   Y la comprobación: `17 × 2753 = 46801`, y `46801 mod 3120 = 1` ✔
+
+5. **Cifra y descifra con tus números.** Si tu clave es chica (menos de 17 bits)
+   no cabe ni un byte de texto, así que cifra un **número** que elijas:
+   `c = 42^17 mod 3233 = 2557`, y de vuelta `2557^2753 mod 3233 = 42`. Con
+   primos de 3 cifras (`257` y `263`) ya cabe texto y lo cifra letra a letra.
+6. **Firma y verifica**, y además cambia el texto para que veas cómo la firma
+   deja de cuadrar.
 
 ---
 

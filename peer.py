@@ -13,15 +13,15 @@ Además cada mensaje va FIRMADO con la clave privada de quien lo envía, así
 que el receptor puede probar quién lo escribió (autenticidad) y que nadie
 lo cambió en el camino (integridad):
 
-    Beto firma :  s = h^d_Beto mod n_Beto        (h = SHA-256 del texto)
-    Ana verifica:  h' = s^e_Beto mod n_Beto  ->  ¿h' == SHA-256(texto)?
+    Efrén firma :  s = h^d_Efrén mod n_Efrén        (h = SHA-256 del texto)
+    Harold verifica:  h' = s^e_Efrén mod n_Efrén  ->  ¿h' == SHA-256(texto)?
 
 Uso (misma PC, dos terminales):
-    python3 peer.py escuchar 5000 --nombre Ana
-    python3 peer.py conectar 127.0.0.1 5000 --nombre Beto
+    python3 peer.py escuchar 5000 --nombre Harold
+    python3 peer.py conectar 127.0.0.1 5000 --nombre Efrén
 
-Con el espía en medio (ver espia.py), Beto se conecta al espía:
-    python3 peer.py conectar 127.0.0.1 6000 --nombre Beto
+Con el espía en medio (ver espia.py), Efrén se conecta al espía:
+    python3 peer.py conectar 127.0.0.1 6000 --nombre Efrén
 
 Opciones:
     --bits N   bits de CADA primo (defecto 512 -> n de 1024 bits).

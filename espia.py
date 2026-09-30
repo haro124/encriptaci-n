@@ -15,7 +15,7 @@ así que los peers no notan nada. Muestra lo que ve un atacante en la red:
 
 Esquema en una sola PC:
 
-    Beto (peer)  --->  espía :6000  --->  Ana (peer) :5000
+    Efrén (peer)  --->  espía :6000  --->  Harold (peer) :5000
 
 Uso:
     python3 espia.py                          # escucha 6000, reenvía a 127.0.0.1:5000
@@ -23,8 +23,8 @@ Uso:
     python3 espia.py --estimar 4096           # estimación para otro tamaño de clave
     python3 espia.py --estimar 0              # sin estimación
 
-Luego Ana:   python3 peer.py escuchar 5000 --nombre Ana
-y Beto:      python3 peer.py conectar 127.0.0.1 6000 --nombre Beto
+Luego Harold:   python3 peer.py escuchar 5000 --nombre Harold
+y Efrén:      python3 peer.py conectar 127.0.0.1 6000 --nombre Efrén
 """
 
 import argparse
