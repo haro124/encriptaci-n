@@ -1,5 +1,5 @@
 """
-CONSTRUYE TU PROPIA CLAVE RSA  (opción 6 del menú)
+CONSTRUYE TU PROPIA CLAVE RSA  (opción 5 del menú)
 ==================================================
 Aquí eliges TÚ los números y el programa enseña, división por división,
 todo lo que pasa por dentro:

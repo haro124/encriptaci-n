@@ -10,7 +10,7 @@ aparte de Python 3.
 
 Uso:
     python3 lanzar_demo.py            # menú interactivo
-    python3 lanzar_demo.py 1          # opción directa (1-6)
+    python3 lanzar_demo.py 1          # opción directa (1-5)
 
 Normalmente se ejecuta con iniciar_demo.sh (Linux) o iniciar_demo.bat (Windows).
 """
@@ -31,11 +31,10 @@ MENU = """
    RSA sobre P2P · DEMO PARA LA EXPOSICIÓN
 ========================================================================
   1) Chat Harold <-> Efrén con ESPÍA en medio  (clave fuerte 1024 bits)
-  2) Chat Harold <-> Efrén con ESPÍA en medio  (clave DÉBIL 64 bits)
-  3) Chat Harold <-> Efrén directo, sin espía  (para espiar con Wireshark)
-  4) Demo paso a paso en una sola ventana      (demo_local.py)
-  5) Ataque de MCD a claves mal generadas      (ataque_mcd.py)
-  6) Construye TU clave: eliges p, q y e       (mi_clave.py)
+  2) Chat Harold <-> Efrén directo, sin espía  (para espiar con Wireshark)
+  3) Demo paso a paso en una sola ventana      (demo_local.py)
+  4) Ataque de MCD a claves mal generadas      (ataque_mcd.py)
+  5) Construye TU clave: eliges p, q y e       (mi_clave.py)
   0) Salir
 """
 
@@ -133,14 +132,12 @@ def main():
         if opcion == "1":
             chat(512, con_espia=True)
         elif opcion == "2":
-            chat(32, con_espia=True)
-        elif opcion == "3":
             chat(512, con_espia=False)
-        elif opcion == "4":
+        elif opcion == "3":
             en_esta_ventana("demo_local.py")
-        elif opcion == "5":
+        elif opcion == "4":
             en_esta_ventana("ataque_mcd.py")
-        elif opcion == "6":
+        elif opcion == "5":
             en_esta_ventana("mi_clave.py")
         elif opcion in ("0", "q", ""):
             return

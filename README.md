@@ -32,11 +32,10 @@ muestra un menú:
 
 ```
   1) Chat Harold <-> Efrén con ESPÍA en medio  (clave fuerte 1024 bits)
-  2) Chat Harold <-> Efrén con ESPÍA en medio  (clave DÉBIL 64 bits)
-  3) Chat Harold <-> Efrén directo, sin espía  (para espiar con Wireshark)
-  4) Demo paso a paso en una sola ventana
-  5) Ataque de MCD a claves mal generadas
-  6) Construye TU clave: eliges p, q y e
+  2) Chat Harold <-> Efrén directo, sin espía  (para espiar con Wireshark)
+  3) Demo paso a paso en una sola ventana
+  4) Ataque de MCD a claves mal generadas
+  5) Construye TU clave: eliges p, q y e
 ```
 
 ### 🐧 CachyOS / Arch Linux
@@ -61,7 +60,7 @@ Foot, WezTerm, xterm…). Para forzar una: `TERMINAL=kitty ./iniciar_demo.sh`.
 Se abren 3 ventanas de consola. Todo escucha solo en `127.0.0.1`, así que el
 firewall de Windows no debería mostrar ningún aviso.
 
-### Wireshark (opcional, opción 3 del menú)
+### Wireshark (opcional, opción 2 del menú)
 
 - **CachyOS:** `sudo pacman -S wireshark-qt` y `sudo usermod -aG wireshark $USER`
   (cierra sesión y vuelve a entrar). Captura en la interfaz `lo`.
@@ -217,7 +216,7 @@ firma no cuadran sale `✗ FIRMA INVÁLIDA`. Prueba rápida sin red:
 python3 rsa_core.py      # firma, verifica, y rechaza el texto alterado
 ```
 
-En la opción 2 del menú (clave débil) el espía rompe la clave de Efrén, así que
+Con una clave débil (`--bits 32`, ver la Escena 2) el espía rompe la clave de Efrén, así que
 también puede **firmar en su nombre**: la firma solo vale si la clave es fuerte.
 
 ---
@@ -244,7 +243,7 @@ grande, y por eso hoy el mínimo recomendado es 2048.
 
 ## 7) Construye tu propia clave (eliges tú los números)
 
-La opción **6** del menú, o directamente:
+La opción **5** del menú, o directamente:
 
 ```bash
 python3 mi_clave.py            # te pregunta p, q y e
