@@ -14,9 +14,15 @@ import sys
 
 from rsa_core import _tam_bloque
 
-# Activa colores ANSI en la consola de Windows (en Linux/Mac no hace nada)
+# Windows: activa colores ANSI y evita que un emoji o acento tumbe el
+# programa en consolas que no usan UTF-8 (en Linux no hace nada).
 if os.name == "nt":
     os.system("")
+for _flujo in (sys.stdout, sys.stderr):
+    try:
+        _flujo.reconfigure(encoding="utf-8", errors="replace")
+    except (AttributeError, ValueError):
+        pass
 
 _COLOR = sys.stdout.isatty() and not os.environ.get("NO_COLOR")
 

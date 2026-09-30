@@ -33,7 +33,7 @@ import threading
 import time
 
 from formula import corto, rojo, verde, amarillo, cian, gris, negrita
-from red import _recibir_exacto
+from red import _recibir_exacto, escuchar_una_conexion, conectar_con_reintentos
 from rsa_core import inverso_modular
 
 claves_rotas = {}          # nombre del dueño de la clave -> (d, n)
@@ -165,6 +165,8 @@ def main():
     ap.add_argument("destino_puerto", nargs="?", type=int, default=5000)
     ap.add_argument("--tiempo", type=int, default=15,
                     help="segundos máximos para intentar factorizar cada n")
+    ap.add_argument("--host", default="0.0.0.0",
+                    help="interfaz donde escuchar (127.0.0.1 = solo esta PC)")
     args = ap.parse_args()
 
     print(rojo(negrita("=" * 64)))
@@ -173,25 +175,25 @@ def main():
     print(f"Escuchando en :{args.puerto}  ->  reenviando a "
           f"{args.destino_host}:{args.destino_puerto}")
 
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as srv:
-        srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        srv.bind(("0.0.0.0", args.puerto))
-        srv.listen(1)
-        victima_a, addr = srv.accept()
+    try:
+        victima_a, addr = escuchar_una_conexion(args.host, args.puerto)
         print(f"Víctima conectada desde {addr[0]}:{addr[1]}")
-        victima_b = socket.create_connection((args.destino_host, args.destino_puerto))
+        victima_b = conectar_con_reintentos(args.destino_host, args.destino_puerto)
         print("Conexión reenviada al otro peer. Ellos no notan nada. 👀")
 
         estado = {}
-        t1 = threading.Thread(target=reenviar, daemon=True,
-                              args=(victima_a, victima_b, "→", estado, args.tiempo))
-        t2 = threading.Thread(target=reenviar, daemon=True,
-                              args=(victima_b, victima_a, "←", estado, args.tiempo))
-        t1.start(); t2.start()
-        try:
-            t1.join(); t2.join()
-        except KeyboardInterrupt:
-            print("\nEspía detenido.")
+        hilos = [
+            threading.Thread(target=reenviar, daemon=True,
+                             args=(victima_a, victima_b, "→", estado, args.tiempo)),
+            threading.Thread(target=reenviar, daemon=True,
+                             args=(victima_b, victima_a, "←", estado, args.tiempo)),
+        ]
+        for h in hilos:
+            h.start()
+        while any(h.is_alive() for h in hilos):   # join con timeout: Ctrl+C en Windows
+            hilos[0].join(0.5)
+    except KeyboardInterrupt:
+        print("\nEspía detenido.")
 
 
 if __name__ == "__main__":

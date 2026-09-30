@@ -22,12 +22,12 @@ Opciones:
 """
 
 import argparse
-import socket
 import threading
 
 from formula import (mostrar_clave, cifrar_explicado, descifrar_explicado,
                      verde, rojo, negrita, gris)
-from red import enviar_json, recibir_json
+from red import (enviar_json, recibir_json, escuchar_una_conexion,
+                 conectar_con_reintentos)
 from rsa_core import generar_claves
 
 
@@ -56,6 +56,8 @@ def main():
     ap.add_argument("--nombre", default=None)
     ap.add_argument("--bits", type=int, default=512,
                     help="bits de cada primo (defecto 512)")
+    ap.add_argument("--host", default="0.0.0.0",
+                    help="interfaz donde escuchar (127.0.0.1 = solo esta PC)")
     args = ap.parse_args()
     nombre = args.nombre or ("Receptor" if args.modo == "escuchar" else "Emisor")
 
@@ -65,19 +67,15 @@ def main():
 
     if args.modo == "escuchar":
         puerto = int(args.destino[0]) if args.destino else 5000
-        srv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        srv.bind(("0.0.0.0", puerto))
-        srv.listen(1)
         print(f"\nEsperando a un peer en el puerto {puerto}...")
-        conn, addr = srv.accept()
-        srv.close()
+        conn, addr = escuchar_una_conexion(args.host, puerto)
         print(f"Conectado con {addr[0]}:{addr[1]}")
     else:
         host = args.destino[0] if args.destino else "127.0.0.1"
         puerto = int(args.destino[1]) if len(args.destino) > 1 else 5000
-        conn = socket.create_connection((host, puerto))
-        print(f"\nConectado a {host}:{puerto}")
+        print(f"\nConectando a {host}:{puerto}...")
+        conn = conectar_con_reintentos(host, puerto)
+        print(f"Conectado a {host}:{puerto}")
 
     # Intercambio de claves públicas (la privada nunca viaja)
     e, n = publica

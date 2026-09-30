@@ -7,7 +7,9 @@ receptor sabe exactamente cuántos bytes leer (evita mensajes cortados).
 """
 
 import json
+import socket
 import struct
+import time
 
 
 def _recibir_exacto(sock, cantidad):
@@ -31,3 +33,34 @@ def recibir_json(sock):
     """Recibe un objeto JSON completo."""
     (longitud,) = struct.unpack(">I", _recibir_exacto(sock, 4))
     return json.loads(_recibir_exacto(sock, longitud).decode("utf-8"))
+
+
+def escuchar_una_conexion(host, puerto):
+    """
+    Espera UNA conexión entrante. Usa un timeout corto en el bucle para
+    que Ctrl+C funcione también en Windows (allí accept() lo bloquea).
+    """
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as srv:
+        srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        srv.bind((host, puerto))
+        srv.listen(1)
+        srv.settimeout(1.0)
+        while True:
+            try:
+                conn, addr = srv.accept()
+                conn.settimeout(None)
+                return conn, addr
+            except socket.timeout:
+                continue
+
+
+def conectar_con_reintentos(host, puerto, segundos=60):
+    """Conecta a host:puerto reintentando mientras el otro peer arranca."""
+    limite = time.time() + segundos
+    while True:
+        try:
+            return socket.create_connection((host, puerto))
+        except (ConnectionRefusedError, OSError):
+            if time.time() > limite:
+                raise
+            time.sleep(0.5)

@@ -18,13 +18,61 @@ Todo es Python estándar. **No necesitas instalar nada.**
 | `demo_local.py`  | Todo el ciclo en una sola terminal, ideal para las diapositivas. |
 | `peer.py`        | **Chat P2P en tiempo real**, bidireccional, mostrando la fórmula de cada mensaje. |
 | `formula.py`     | Imprime paso a paso `texto → bytes → m → c = mᵉ mod n` y su inverso. |
+| `lanzar_demo.py` | **Menú** que abre las ventanas solo (Linux y Windows). |
+| `iniciar_demo.sh` / `.bat` | Doble clic / `./` para arrancar el menú en CachyOS o Windows. |
 | `espia.py`       | **Atacante en medio**: intercepta el P2P, ve solo números e intenta romper la clave. |
 
 ---
 
-## ⭐ Guía para la exposición (todo en una sola PC)
+## 🚀 Inicio rápido (un clic)
 
-Abre **3 terminales** en esta carpeta (en Windows usa `python` en vez de `python3`).
+El lanzador abre **solo** las 3 ventanas (Ana, Espía, Beto) en tu PC y
+muestra un menú:
+
+```
+  1) Chat Ana <-> Beto con ESPÍA en medio  (clave fuerte 1024 bits)
+  2) Chat Ana <-> Beto con ESPÍA en medio  (clave DÉBIL 64 bits)
+  3) Chat Ana <-> Beto directo, sin espía  (para espiar con Wireshark)
+  4) Demo paso a paso en una sola ventana
+  5) Ataque de MCD a claves mal generadas
+```
+
+### 🐧 CachyOS / Arch Linux
+
+Python ya viene instalado en CachyOS (si no: `sudo pacman -S python`).
+
+```bash
+cd rsa_p2p_exposicion
+chmod +x iniciar_demo.sh      # solo la primera vez
+./iniciar_demo.sh
+```
+
+Detecta tu terminal sola (Konsole, Kitty, Alacritty, GNOME Terminal, Ptyxis,
+Foot, WezTerm, xterm…). Para forzar una: `TERMINAL=kitty ./iniciar_demo.sh`.
+
+### 🪟 Windows 10 / 11
+
+1. Instala Python 3 desde <https://www.python.org/downloads/> y marca
+   **"Add python.exe to PATH"** durante la instalación.
+2. Descomprime la carpeta y haz **doble clic en `iniciar_demo.bat`**.
+
+Se abren 3 ventanas de consola. Todo escucha solo en `127.0.0.1`, así que el
+firewall de Windows no debería mostrar ningún aviso.
+
+### Wireshark (opcional, opción 3 del menú)
+
+- **CachyOS:** `sudo pacman -S wireshark-qt` y `sudo usermod -aG wireshark $USER`
+  (cierra sesión y vuelve a entrar). Captura en la interfaz `lo`.
+- **Windows:** instala Wireshark con **Npcap** marcando *"Support loopback
+  traffic capture"*. Captura en *"Adapter for loopback traffic capture"*.
+- Filtro: `tcp.port == 5000` → clic derecho → *Follow → TCP Stream*.
+
+---
+
+## ⭐ Guía para la exposición (paso a paso, a mano)
+
+Si prefieres abrir las terminales tú mismo: abre **3 terminales** en esta
+carpeta (en Windows usa `python` en vez de `python3`).
 
 ```
    Beto (peer)  ───►  ESPÍA :6000  ───►  Ana (peer) :5000
